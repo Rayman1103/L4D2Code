@@ -1,0 +1,2 @@
+//Goes in class CBaseEntityOutput
+void ScriptRemoveEventAction( CEventAction *pEventAction, const char *szTarget, const char *szTargetInput, const char *szParameter );

@@ -1,0 +1,13 @@
+class CNavAreaScriptInstanceHelper : public IScriptInstanceHelper
+{
+	bool ToString( void *p, char *pBuf, int bufSize );
+};
+
+extern CNavAreaScriptInstanceHelper g_NavAreaScriptInstanceHelper;
+
+class CNavLadderScriptInstanceHelper : public IScriptInstanceHelper
+{
+	bool ToString( void *p, char *pBuf, int bufSize );
+};
+
+extern CNavLadderScriptInstanceHelper g_NavLadderScriptInstanceHelper;

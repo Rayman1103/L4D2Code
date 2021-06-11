@@ -1,0 +1,106 @@
+BEGIN_ENT_SCRIPTDESC_ROOT( CNavLadder, "Navigation ladders class" )
+	DEFINE_SCRIPT_INSTANCE_HELPER( &g_NavLadderScriptInstanceHelper )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetID, "GetID", "Get ladder ID." )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptConnectTo, "ConnectTo", "Connect this ladder to given area" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptDisconnect, "Disconnect", "Disconnect this ladder from given area" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptIsConnected, "IsConnected", "Return true if given ladder is connected in given direction" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetBottomOrigin, "GetBottomOrigin", "World coords of the bottom of the ladder" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetTopOrigin, "GetTopOrigin", "World coords of the top of the ladder" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetBottomArea, "GetBottomArea", "Area of the bottom of the ladder" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetTopArea, "GetTopArea", "Area of the top of the ladder" )
+	DEFINE_SCRIPTFUNC( IsUsableByTeam, "Returns true if ladder is usable for team" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetLadderEntity, "GetLadderEntity", "Returns the ladder entity" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptIsInUse, "IsInUse", "Return true if someone is on this ladder (other than 'ignore')" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetLength, "GetLength", "Return the length of the ladder" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetWidth, "GetWidth", "Return the width of the ladder" )
+	DEFINE_SCRIPTFUNC( GetNormal, "Return the surface normal of the ladder surface" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetDir, "GetDir", "Return the way the ladder faces (ie: surface normal of climbable side)" )
+	DEFINE_SCRIPTFUNC( GetPosAtHeight, "Return x,y coordinate of the ladder at a given height" )
+END_SCRIPTDESC();
+
+
+
+----------------------------------------------
+// Add the following to the destructor
+//CNavLadder::~CNavLadder()
+//
+
+if ( m_hScriptInstance )
+{
+	g_pScriptVM->RemoveInstance( m_hScriptInstance );
+	m_hScriptInstance = NULL;
+}
+
+
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+HSCRIPT CNavLadder::GetScriptInstance()
+{
+	if ( !m_hScriptInstance )
+	{
+		m_hScriptInstance = g_pScriptVM->RegisterInstance( GetScriptDesc(), this );
+	}
+	return m_hScriptInstance;
+}
+
+void CNavLadder::ScriptConnectTo( HSCRIPT hArea )
+{
+	TerrorNavArea *pArea = ToNavArea(hArea);
+	if ( !pArea )
+		return;
+
+	ConnectTo( pArea );
+}
+
+void CNavLadder::ScriptDisconnect( HSCRIPT hArea )
+{
+	TerrorNavArea *pArea = ToNavArea(hArea);
+	if ( !pArea )
+		return;
+
+	Disconnect( pArea );
+}
+
+bool CNavLadder::ScriptIsConnected( HSCRIPT hArea, int dir )
+{
+	TerrorNavArea *pArea = ToNavArea(hArea);
+	if ( !pArea )
+		return false;
+
+	return IsConnected( pArea, (LadderDirectionType) dir );
+}
+
+HSCRIPT CNavLadder::ScriptGetBottomArea()
+{
+	TerrorNavArea *area = m_bottomArea;
+	if ( area )
+		return ToHScript( area );
+
+	return NULL;
+}
+
+HSCRIPT CNavLadder::ScriptGetTopArea()
+{
+	TerrorNavArea *area = m_topForwardArea;
+	if ( area )
+		return ToHScript( area );
+
+	return NULL;
+}
+
+HSCRIPT CNavLadder::ScriptGetLadderEntity()
+{
+	return ToHScript( GetLadderEntity() );
+}
+
+bool CNavLadder::ScriptIsInUse( HSCRIPT hIgnore )
+{
+	CBaseEntity *pBaseEntity = ToEnt(hIgnore);
+	CBasePlayer *pPlayer = NULL;
+	if ( pBaseEntity )
+		pPlayer = dynamic_cast<CBasePlayer*>(pBaseEntity);
+
+	return IsInUse( pPlayer );
+}

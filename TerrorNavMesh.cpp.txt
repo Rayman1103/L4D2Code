@@ -1,0 +1,73 @@
+DEFINE_SCRIPTFUNC_NAMED( ScriptGetNavAreasFromBuildPath, "GetNavAreasFromBuildPath", "Fills a passed in table of areas from a path" )
+DEFINE_SCRIPTFUNC_NAMED( ScriptRegisterAvoidanceObstacle, "RegisterAvoidanceObstacle", "Arguments: ( entity ) - registers avoidance obstacle" )
+DEFINE_SCRIPTFUNC_NAMED( ScriptUnregisterAvoidanceObstacle, "UnregisterAvoidanceObstacle", "Arguments: ( entity ) - unregisters avoidance obstacle" )
+DEFINE_SCRIPTFUNC_NAMED( ScriptGetNavAreasOverlappingEntityExtent, "GetNavAreasOverlappingEntityExtent", "Arguments: ( entity, table ) - fills passed in table with areas overlapping entity's extent" )
+
+
+bool TerrorNavMesh::ScriptGetNavAreasFromBuildPath( HSCRIPT hStartArea, HSCRIPT hGoalArea, const Vector &goalPos, float maxPathLength, int teamID, bool ignoreNavBlockers, HSCRIPT hTable )
+{
+	CTerrorNavArea *startArea = ToNavArea( hStartArea );
+	CTerrorNavArea *goalArea = ToNavArea( hGoalArea );
+	if ( !startArea || !goalArea || !hTable )
+		return false;
+
+	ShortestPathCost shortestPath;
+	if (NavAreaBuildPath( startArea, goalArea, NULL, shortestPath, NULL, maxPathLength, teamID, ignoreNavBlockers ) == false)
+		return false;
+
+	int i = 0;
+	for( TerrorNavArea *area = goalArea; area->GetParent(); area = area->GetParent() )
+	{
+		g_pScriptVM->SetValue( hTable, CFmtStr( "area%i", i ), ToHScript( area->GetParent() ) );
+		i++;
+	}
+	return true;
+}
+
+void TerrorNavMesh::ScriptRegisterAvoidanceObstacle( HSCRIPT hEntity )
+{
+	CBaseEntity *pEntity = ToEnt(hEntity);
+	if ( !pEntity )
+		return;
+
+	INavAvoidanceObstacle *pObstacle = dynamic_cast<INavAvoidanceObstacle*>(pEntity);
+	if ( !pObstacle )
+		return;
+
+	TheNavMesh->RegisterAvoidanceObstacle( pObstacle );
+}
+
+void TerrorNavMesh::ScriptUnregisterAvoidanceObstacle( HSCRIPT hEntity )
+{
+	CBaseEntity *pEntity = ToEnt(hEntity);
+	if ( !pEntity )
+		return;
+
+	INavAvoidanceObstacle *pObstacle = dynamic_cast<INavAvoidanceObstacle*>(pEntity);
+	if ( !pObstacle )
+		return;
+
+	TheNavMesh->UnregisterAvoidanceObstacle( pObstacle );
+}
+
+void TerrorNavMesh::ScriptGetNavAreasOverlappingEntityExtent( HSCRIPT hEntity, HSCRIPT hTable )
+{
+	CBaseEntity *pEntity = ToEnt(hEntity);
+
+	if ( !pEntity || !hTable )
+		return;
+
+	NavAreaCollector collector;
+	Extent extent;
+	pEntity->CollisionProp()->WorldSpaceAABB( &extent.lo, &extent.hi );
+	if ( FClassnameIs( pEntity, "prop_physics" ) || FClassnameIs( pEntity, "trigger_hurt" ) )
+		extent.lo.z -= HumanHeight;
+
+	TheNavMesh->ForAllAreasOverlappingExtent( collector, extent );
+	FOR_EACH_VEC( collector.m_area, it )
+	{
+		TerrorNavArea *area = collector.m_area[ it ];
+		if ( area )
+			g_pScriptVM->SetValue( hTable, CFmtStr( "area%i", it ), ToHScript( area ) );
+	}
+}

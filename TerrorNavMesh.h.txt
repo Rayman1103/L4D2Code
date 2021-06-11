@@ -1,0 +1,4 @@
+bool ScriptGetNavAreasFromBuildPath( HSCRIPT hStartArea, HSCRIPT hGoalArea, const Vector &goalPos, float maxPathLength, int teamID, bool ignoreNavBlockers, HSCRIPT hTable )
+void ScriptRegisterAvoidanceObstacle( HSCRIPT hEntity );
+void ScriptUnregisterAvoidanceObstacle( HSCRIPT hEntity );
+void ScriptGetNavAreasOverlappingEntityExtent( HSCRIPT hEntity, HSCRIPT hTable );

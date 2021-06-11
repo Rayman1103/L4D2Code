@@ -1,0 +1,351 @@
+BEGIN_ENT_SCRIPTDESC_ROOT( TerrorNavArea, "Navigation areas class" )
+	DEFINE_SCRIPT_INSTANCE_HELPER( &g_NavAreaScriptInstanceHelper )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetID, "GetID", "Get area ID." )
+	DEFINE_SCRIPTFUNC( GetAttributes, "Get area attribute bits" )
+	DEFINE_SCRIPTFUNC( SetAttributes, "Set area attribute bits" )
+	DEFINE_SCRIPTFUNC( HasAttributes, "Has area attribute bits" )
+	DEFINE_SCRIPTFUNC( RemoveAttributes, "Removes area attribute bits" )
+	DEFINE_SCRIPTFUNC( GetCenter, "Get center origin of area" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetCorner, "GetCorner", "Get corner origin of area" )
+	DEFINE_SCRIPTFUNC( GetRandomPoint, "Get random origin within extent of area" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptConnectToArea, "ConnectTo", "Connect this area to given area in given direction" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptDisconnectArea, "Disconnect", "Disconnect this area from given area" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptIsConnectedArea, "IsConnected", "Return true if given area is connected in given direction" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptConnectToLadder, "ConnectToLadder", "Connect this area to given ladder" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptDisconnectLadder, "DisconnectLadder", "Disconnect this area from given ladder" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptIsConnectedLadder, "IsConnectedLadder", "Return true if given area is connected to ladder in given direction" )
+	DEFINE_SCRIPTFUNC( IsDamaging, "Return true if continuous damage (ie: fire) is in this area" )
+	DEFINE_SCRIPTFUNC( MarkAsDamaging, "Mark this area is damaging for the next 'duration' seconds" )
+	DEFINE_SCRIPTFUNC( IsBlocked, "Return true if team is blocked in this area" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptMarkAsBlocked, "MarkAsBlocked", "Mark this area as blocked for team" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetAdjacentCount, "GetAdjacentCount", "Get the number of adjacent areas in the given direction" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetAdjacentAreas, "GetAdjacentAreas", "Fills a passed in table with all adjacent areas in the given direction" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetAdjacentArea, "GetAdjacentArea", "Return the i'th adjacent area in the given direction" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetRandomAdjacentArea, "GetRandomAdjacentArea", "Return a random adjacent area in the given direction" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetIncomingConnections, "GetIncomingConnections", "Fills a passed in table with areas connected TO this area by a ONE-WAY link (ie: we have no connection back to them)" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptAddIncomingConnection, "AddIncomingConnection", "Add areas that connect TO this area by a ONE-WAY link" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetPlaceName, "GetPlaceName", "Get place name" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptSetPlaceName, "SetPlaceName", "Set place name" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptComputeDirection, "ComputeDirection", "Return direction from this area to the given point" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetLadders, "GetLadders", "Fills a passed in table of ladders in direction" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetPlayerCount, "GetPlayerCount", "Return number of players of given team currently within this area (team of zero means any/all)" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptIsOverlapping, "IsOverlapping", "Return true if 'area' overlaps our 2D extents" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptIsOverlappingOrigin, "IsOverlappingOrigin", "Return true if 'pos' is within 2D extents of area" )
+	DEFINE_SCRIPTFUNC( IsPotentiallyVisibleToTeam, "Return true if any portion of this area is visible to anyone on the given team" )
+	DEFINE_SCRIPTFUNC( IsCompletelyVisibleToTeam, "Return true if given area is completely visible from somewhere in this area by someone on the team" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptIsEdge, "IsEdge", "Return true if there are no bi-directional links on the given side" )
+	DEFINE_SCRIPTFUNC( HasAvoidanceObstacle, "Returns true if there's a large, immobile object obstructing this area" )
+	DEFINE_SCRIPTFUNC( MarkObstacleToAvoid, "Marks the obstructed status of the nav area" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptContains, "Contains", "Return true if other area is on or above this area, but no others" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptContainsOrigin, "ContainsOrigin", "Return true if given point is on or above this area, but no others" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptComputeGroundHeightChange, "ComputeGroundHeightChange", "Compute change in actual ground height from this area to given area" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetParent, "GetParent", "Returns the area just prior to this one in the search path" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetParentHow, "GetParentHow", "Returns how we get from parent to us" )
+	DEFINE_SCRIPTFUNC_NAMED( DrawFilled, "DebugDrawFilled", "Draw area as a filled rect of the given color" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptUnblockArea, "UnblockArea", "Unblocks this area" )
+	DEFINE_SCRIPTFUNC( IsRoughlySquare, "Return true if this area is approximately square" )
+	DEFINE_SCRIPTFUNC( IsFlat, "Return true if this area is approximately flat" )
+	DEFINE_SCRIPTFUNC( IsDegenerate, "Return true if this area is badly formed" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptIsVisible, "IsVisible", "Return true if area is visible from the given eyepoint" )
+	DEFINE_SCRIPTFUNC( GetSizeX, "" )
+	DEFINE_SCRIPTFUNC( GetSizeY, "" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetZ, "GetZ", "Return Z of area at (x,y) of 'pos'" )
+	DEFINE_SCRIPTFUNC( GetDistanceSquaredToPoint, "Return shortest distance between point and this area" )
+	DEFINE_SCRIPTFUNC( GetSpawnAttributes, "Get spawn attribute bits" ) //Get m_spawnAttributes
+	DEFINE_SCRIPTFUNC( HasSpawnAttributes, "Has spawn attribute bits" ) //Has m_spawnAttributes
+	DEFINE_SCRIPTFUNC( IsUnderwater, "Return true if area is underwater" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptIsCoplanar, "IsCoplanar", "Return true if this area and given area are approximately co-planar" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptRemoveOrthogonalConnections, "RemoveOrthogonalConnections", "Removes all connections in directions to left and right of specified direction" )
+	DEFINE_SCRIPTFUNC( GetAvoidanceObstacleHeight, "Returns the maximum height of the obstruction above the ground" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetElevator, "GetElevator", "Returns the elevator if in an elevator's path" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetElevatorAreas, "GetElevatorAreas", "Fills a passed in table with a collection of areas reachable via elevator from this area" )
+	DEFINE_SCRIPTFUNC( IsSpawningAllowed, "Returns true if spawning is allowed" )
+	DEFINE_SCRIPTFUNC( MarkAreaNotCleared, "Mark this area as not cleared" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptRemoveSpawnAttributes, "RemoveSpawnAttributes", "Remove area attribute bits" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptSetSpawnAttributes, "SetSpawnAttributes", "Set area attribute bits" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetDoor, "GetDoor", "Returns the door above the area" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptIsCleared, "IsCleared", "Returns true if this area has been cleared" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptMarkAreaCleared, "MarkAreaCleared", "Mark this area as cleared" )
+	DEFINE_SCRIPTFUNC( GetTimeSinceCleared, "Returns the time since the area was cleared" )
+	DEFINE_SCRIPTFUNC( IsBottleneck, "Returns true if area is a bottleneck" )
+	DEFINE_SCRIPTFUNC( IsTerrorMarked, "Returns true if area is terror marked" )
+	DEFINE_SCRIPTFUNC( IsValidForWanderingPopulation, "Returns true if area is valid for wandering population" )
+END_SCRIPTDESC();
+
+---------------------------------------------
+// Add the following to the constructor
+//TerrorNavArea::TerrorNavArea( void )
+//
+
+m_hScriptInstance = NULL;
+
+
+----------------------------------------------
+// Add the following to the destructor
+//TerrorNavArea::~TerrorNavArea()
+//
+
+if ( m_hScriptInstance )
+{
+	g_pScriptVM->RemoveInstance( m_hScriptInstance );
+	m_hScriptInstance = NULL;
+}
+
+
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+HSCRIPT TerrorNavArea::GetScriptInstance()
+{
+	if ( !m_hScriptInstance )
+	{
+		m_hScriptInstance = g_pScriptVM->RegisterInstance( GetScriptDesc(), this );
+	}
+	return m_hScriptInstance;
+}
+
+void TerrorNavArea::ScriptGetAdjacentAreas( int dir, HSCRIPT hTable )
+{
+	if ( !hTable )
+		return;
+
+	const NavConnectVector *pConnections = GetAdjacentAreas( (NavDirType) dir );
+	FOR_EACH_VEC( (*pConnections), it )
+	{
+		NavConnect connect = (*pConnections)[ it ];
+		TerrorNavArea *area = connect.area;
+		if ( area )
+		{
+			g_pScriptVM->SetValue( hTable, CFmtStr( "area%i", it ), ToHScript( area ) );
+		}
+	}
+}
+
+HSCRIPT TerrorNavArea::ScriptGetAdjacentArea( int dir, int i )
+{
+	return ToHScript( GetAdjacentArea( (NavDirType) dir, i ) );
+}
+
+HSCRIPT TerrorNavArea::ScriptGetRandomAdjacentArea( int dir )
+{
+	return ToHScript( GetRandomAdjacentArea( (NavDirType) dir ) );
+}
+
+void TerrorNavArea::ScriptGetIncomingConnections( int dir, HSCRIPT hTable )
+{
+	if ( !hTable )
+		return;
+
+	const NavConnectVector *pConnections = GetIncomingConnections( (NavDirType) dir );
+	FOR_EACH_VEC( (*pConnections), it )
+	{
+		NavConnect connect = (*pConnections)[ it ];
+		TerrorNavArea *area = connect.area;
+		if ( area )
+		{
+			g_pScriptVM->SetValue( hTable, CFmtStr( "area%i", it ), ToHScript( area ) );
+		}
+	}
+}
+
+void TerrorNavArea::ScriptAddIncomingConnection( HSCRIPT hSource, int incomingEdgeDir )
+{
+	TerrorNavArea *pArea = ToNavArea(hSource);
+	if ( !pArea )
+		return;
+
+	AddIncomingConnection( pArea, (NavDirType) incomingEdgeDir );
+}
+
+void TerrorNavArea::ScriptConnectToArea( HSCRIPT hArea, int dir )
+{
+	TerrorNavArea *pArea = ToNavArea(hArea);
+	if ( !pArea )
+		return;
+
+	if ( dir == -1 )
+	{
+		Vector center;
+		float halfWidth;
+		NavDirType autoDir = ComputeLargestPortal( pArea, &center, &halfWidth );
+		if ( autoDir != NUM_DIRECTIONS )
+			ConnectTo( pArea, autoDir );
+	}
+	else
+		ConnectTo( pArea, (NavDirType) dir );
+}
+
+void TerrorNavArea::ScriptDisconnectArea( HSCRIPT hArea )
+{
+	TerrorNavArea *pArea = ToNavArea(hArea);
+	if ( !pArea )
+		return;
+
+	Disconnect( pArea );
+}
+
+bool TerrorNavArea::ScriptIsConnectedArea( HSCRIPT hArea, int dir )
+{
+	TerrorNavArea *pArea = ToNavArea(hArea);
+	if ( !pArea )
+		return false;
+
+	return IsConnected( pArea, (NavDirType) dir );
+}
+
+void TerrorNavArea::ScriptConnectToLadder( HSCRIPT hLadder )
+{
+	CNavLadder *pLadder = ToNavLadder(hLadder);
+	if ( !pLadder )
+		return;
+
+	ConnectTo( pLadder );
+}
+
+void TerrorNavArea::ScriptDisconnectLadder( HSCRIPT hLadder )
+{
+	CNavLadder *pLadder = ToNavLadder(hLadder);
+	if ( !pLadder )
+		return;
+
+	Disconnect( pLadder );
+}
+
+bool TerrorNavArea::ScriptIsConnectedLadder( HSCRIPT hLadder, int dir )
+{
+	CNavLadder *pLadder = ToNavLadder(hLadder);
+	if ( !pLadder )
+		return false;
+
+	return IsConnected( pLadder, (CNavLadder::LadderDirectionType) dir );
+}
+
+void TerrorNavArea::ScriptMarkAsBlocked( int teamID )
+{
+	MarkAsBlocked( teamID, NULL );
+}
+
+const char *TerrorNavArea::ScriptGetPlaceName()
+{
+	return TheNavMesh->PlaceToName( GetPlace() );
+}
+
+void TerrorNavArea::ScriptSetPlaceName( const char *pszName )
+{
+	Place place = TheNavMesh->PartialNameToPlace( pszName );
+	if ( place == UNDEFINED_PLACE )
+		return;
+
+	SetPlace( place );
+}
+
+void TerrorNavArea::ScriptGetLadders( int dir, HSCRIPT hTable )
+{
+	if ( !hTable )
+		return;
+
+	const NavLadderConnectVector *ladders = GetLadders( (CNavLadder::LadderDirectionType) dir );
+	FOR_EACH_VEC( (*ladders), it )
+	{
+		CNavLadder *ladder = (*ladders)[ it ].ladder;
+		if ( ladder )
+			g_pScriptVM->SetValue( hTable, CFmtStr( "ladder%i", it ), ToHScript( ladder ) );
+	}
+}
+
+bool TerrorNavArea::ScriptIsOverlapping( HSCRIPT hArea ) const
+{
+	TerrorNavArea *pArea = ToNavArea(hArea);
+	if ( !pArea )
+		return false;
+
+	return IsOverlapping( pArea );
+}
+
+bool TerrorNavArea::ScriptContains( HSCRIPT hArea ) const
+{
+	TerrorNavArea *pArea = ToNavArea(hArea);
+	if ( !pArea )
+		return false;
+
+	return Contains( pArea );
+}
+
+float TerrorNavArea::ScriptComputeGroundHeightChange( HSCRIPT hArea )
+{
+	TerrorNavArea *pArea = ToNavArea(hArea);
+	if ( !pArea )
+		return -1.0f;
+
+	return ComputeGroundHeightChange( pArea );
+}
+
+HSCRIPT TerrorNavArea::ScriptGetParent()
+{
+	return ToHScript( GetParent() );
+}
+
+int TerrorNavArea::ScriptComputeDirection( const Vector &point ) const
+{
+	Vector pos = point;
+	return ComputeDirection( &pos );
+}
+
+void TerrorNavArea::ScriptUnblockArea( void )
+{
+	UnblockArea();
+}
+
+bool TerrorNavArea::ScriptIsCoplanar( HSCRIPT hArea ) const
+{
+	TerrorNavArea *pArea = ToNavArea(hArea);
+	if ( !pArea )
+		return false;
+
+	return IsCoplanar( pArea );
+}
+
+void TerrorNavArea::ScriptGetElevatorAreas( HSCRIPT hTable )
+{
+	if ( !hTable )
+		return;
+
+	const NavConnectVector &pElevatorAreas = GetElevatorAreas();
+	FOR_EACH_VEC( pElevatorAreas, it )
+	{
+		TerrorNavArea *area = pElevatorAreas[ it ].area;
+		if ( area )
+		{
+			g_pScriptVM->SetValue( hTable, CFmtStr( "area%i", it ), ToHScript( area ) );
+		}
+	}
+}
+
+void TerrorNavArea::ScriptRemoveOrthogonalConnections( int dir )
+{
+	RemoveOrthogonalConnections( (NavDirType) dir );
+}
+
+
+bool ScriptIsCleared( HSCRIPT hPlayer )
+{
+	CBaseEntity *pBaseEntity = ToEnt(hPlayer);
+	CTerrorPlayer *pPlayer = NULL;
+
+	if ( pBaseEntity )
+		pPlayer = dynamic_cast<CTerrorPlayer*>(pBaseEntity);
+
+	return IsCleared( pPlayer );
+}
+
+void ScriptMarkAreaCleared( HSCRIPT hPlayer )
+{
+	CBaseEntity *pBaseEntity = ToEnt(hPlayer);
+	CTerrorPlayer *pPlayer = NULL;
+
+	if ( pBaseEntity )
+		pPlayer = dynamic_cast<CTerrorPlayer*>(pBaseEntity);
+
+	MarkAreaCleared( pPlayer );
+}

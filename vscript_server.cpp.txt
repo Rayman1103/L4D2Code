@@ -1,0 +1,383 @@
+#include "nav_mesh.h"
+#include "nav_pathfind.h"
+
+
+//
+// NOTE: This should be changed to use the existing CNavMesh class where UnblockRescueVehicleNav is already defined for VScript...
+//
+class CScriptNavMesh
+{
+public:
+	HSCRIPT GetNavAreaByID( int areaID )
+	{
+		TerrorNavArea *area = TheNavMesh->GetNavAreaByID( areaID );
+		if ( area )
+		{
+			return ToHScript( area );
+		}
+		return NULL;
+	}
+	HSCRIPT GetLadderByID( int ladderID )
+	{
+		CNavLadder *ladder = TheNavMesh->GetLadderByID( ladderID );
+		if ( ladder )
+		{
+			return ToHScript( ladder );
+		}
+		return NULL;
+	}
+	HSCRIPT GetNavArea( const Vector &pos, float beneathLimt )
+	{
+		TerrorNavArea *area = TheNavMesh->GetNavArea( pos, beneathLimt );
+		if ( area )
+		{
+			return ToHScript( area );
+		}
+		return NULL;
+	}
+	HSCRIPT GetNearestNavArea( const Vector &pos, float maxDist, bool checkLOS, bool checkGround )
+	{
+		TerrorNavArea *area = TheNavMesh->GetNearestNavArea( pos, false, maxDist, checkLOS, checkGround );
+		if ( area )
+		{
+			return ToHScript( area );
+		}
+		return NULL;
+	}
+	void GetNavAreasInRadius( const Vector &pos, float radius, HSCRIPT hTable )
+	{
+		if ( !hTable )
+			return;
+		
+		NavAreaCollector collector;
+		TheNavMesh->ForAllAreasInRadius( collector, pos, radius );
+
+		FOR_EACH_VEC( collector.m_area, it )
+		{
+			g_pScriptVM->SetValue( hTable, CFmtStr( "area%i", it ), ToHScript( collector.m_area[it] ) );
+		}
+	}
+	HSCRIPT FindNavAreaAlongRay( const Vector &start, const Vector &end, HSCRIPT hIgnoreArea )
+	{
+		TerrorNavArea *area = NULL;
+		CNavLadder *ladder = NULL;
+		TerrorNavArea *ignoreArea = ToNavArea( hIgnoreArea );
+		if ( TheNavMesh->FindNavAreaOrLadderAlongRay( start, end, &area, &ladder, ignoreArea ) )
+		{
+			if ( area )
+				return ToHScript( area );
+		}
+		return NULL;
+	}
+	int GetNavAreaCount()
+	{
+		return TheNavMesh->GetNavAreaCount();
+	}
+	void GetAllAreas( HSCRIPT hTable )
+	{
+		FOR_EACH_VEC( TheNavAreas, it )
+		{
+			TerrorNavArea *area = TheNavAreas[ it ];
+			if ( area )
+				g_pScriptVM->SetValue( hTable, CFmtStr( "area%i", it ), ToHScript( area ) );
+		}
+	}
+	void GetObstructingEntities( HSCRIPT hTable )
+	{
+		if ( !hTable )
+			return;
+
+		for ( int i=0; i<TheNavMesh->GetObstructions().Count(); ++i )
+		{
+			INavAvoidanceObstacle *obstruction = TheNavMesh->GetObstructions()[i];
+			CBaseEntity *obstructingEntity = obstruction->GetObstructingEntity();
+			if ( !obstructingEntity )
+				continue;
+
+			g_pScriptVM->SetValue( hTable, CFmtStr( "obstruction%i", i ), ToHScript( obstructingEntity ) );
+		}
+	}
+	void GetAreasWithAttributes( int bits, HSCRIPT hTable )
+	{
+		FOR_EACH_VEC( TheNavAreas, it )
+		{
+			TerrorNavArea *area = TheNavAreas[ it ];
+			if ( area && area->HasAttributes( bits ) )
+				g_pScriptVM->SetValue( hTable, CFmtStr( "area%i", it ), ToHScript( area ) );
+		}
+	}
+	bool ScriptNavAreaBuildPath( HSCRIPT hStartArea, HSCRIPT hGoalArea, const Vector &goalPos, float maxPathLength, int teamID, bool ignoreNavBlockers )
+	{
+		ShortestPathCost shortestPath;
+		TerrorNavArea *startArea = ToNavArea( hStartArea );
+		TerrorNavArea *goalArea = ToNavArea( hGoalArea );
+
+		return NavAreaBuildPath( startArea, goalArea, NULL, shortestPath, NULL, maxPathLength, teamID, ignoreNavBlockers );
+	}
+	float ScriptNavAreaTravelDistance( HSCRIPT hStartArea, HSCRIPT hGoalArea, float maxPathLength )
+	{
+		ShortestPathCost shortestPath;
+		TerrorNavArea *startArea = ToNavArea( hStartArea );
+		TerrorNavArea *goalArea = ToNavArea( hGoalArea );
+
+		return NavAreaTravelDistance( startArea, goalArea, shortestPath, maxPathLength );
+	}
+	int GetLadderCount()
+	{
+		return TheNavMesh->GetLadders().Count();
+	}
+	void GetAllLadders( HSCRIPT hTable )
+	{
+		if ( !hTable )
+			return;
+
+		for ( int i=0; i<TheNavMesh->GetLadders().Count(); ++i )
+		{
+			CNavLadder *ladder = TheNavMesh->GetLadders()[i];
+			if ( ladder )
+				g_pScriptVM->SetValue( hTable, CFmtStr( "ladder%i", i ), ToHScript( ladder ) );
+		}
+	}
+	HSCRIPT FindLadderAlongRay( const Vector &start, const Vector &end, HSCRIPT hIgnoreArea )
+	{
+		TerrorNavArea *area = NULL;
+		CNavLadder *ladder = NULL;
+		TerrorNavArea *ignoreArea = ToNavArea( hIgnoreArea );
+		if ( TheNavMesh->FindNavAreaOrLadderAlongRay( start, end, &area, &ladder, ignoreArea ) )
+		{
+			if ( ladder )
+				return ToHScript( ladder );
+		}
+		return NULL;
+	}
+} g_ScriptNavMesh;
+
+BEGIN_SCRIPTDESC_ROOT_NAMED( CScriptNavMesh, "CScriptNavMesh", SCRIPT_SINGLETON "Used to manipulate nav areas" )
+	DEFINE_SCRIPTFUNC( GetNavAreaByID, "Arguments: ( areaID ) - get nav area by ID" )
+	DEFINE_SCRIPTFUNC( GetLadderByID, "Arguments: ( ladderID ) - get nav ladder by ID" )
+	DEFINE_SCRIPTFUNC( GetNavArea, "Arguments: ( origin, flBeneath ) - given a position in the world, return the nav area that is closest and at the same height, or beneath it." )
+	DEFINE_SCRIPTFUNC( GetNearestNavArea, "Arguments: ( origin, maxDist, checkLOS, checkGround ) - given a position in the world, return the nav area that is closest and at the same height, or beneath it." )
+	DEFINE_SCRIPTFUNC( GetNavAreasInRadius, "Arguments: ( origin, radius, table ) - fills a passed in table of nav areas within radius" )
+	DEFINE_SCRIPTFUNC( FindNavAreaAlongRay, "Arguments: ( startpos, endpos, ignoreAreaID ) - get nav area from ray" )
+	DEFINE_SCRIPTFUNC( GetNavAreaCount, "return total number of nav areas" )
+	DEFINE_SCRIPTFUNC( GetAllAreas, "Arguments: ( table ) - fills a passed in table of all nav areas" )
+	DEFINE_SCRIPTFUNC( GetObstructingEntities, "Arguments: ( table ) - fills a passed in table of all obstructing entities" )
+	DEFINE_SCRIPTFUNC( GetAreasWithAttributes, "Arguments: ( bits, table ) - fills a passed in table of all nav areas that have the specified attributes" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptNavAreaBuildPath, "NavAreaBuildPath", "Arguments: ( area, area, goalPos, flMaxPathLength, teamID, ignoreNavBlockers ) - returns true if a path exists" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptNavAreaTravelDistance, "NavAreaTravelDistance", "Arguments: ( area, area, flMaxPathLength ) - compute distance between two areas. Return -1 if can't reach 'endArea' from 'startArea'" )
+	DEFINE_SCRIPTFUNC( GetLadderCount, "return total number of nav ladders" )
+	DEFINE_SCRIPTFUNC( GetAllLadders, "Arguments: ( table ) - fills a passed in table of all nav ladders" )
+	DEFINE_SCRIPTFUNC( FindLadderAlongRay, "Arguments: ( startpos, endpos, ignoreArea ) - get nav ladder from ray" )
+END_SCRIPTDESC();
+
+
+class CScriptEntityOutputs
+{
+public:
+	int GetNumElements( HSCRIPT hEntity, const char *szOutputName )
+	{
+		CBaseEntity *pBaseEntity = ToEnt(hEntity);
+		if ( !pBaseEntity )
+			return -1;
+
+		CBaseEntityOutput *pOutput = pBaseEntity->FindNamedOutput( szOutputName );
+		if ( !pOutput )
+			return -1;
+
+		return pOutput->NumberOfElements();
+	}
+
+	void GetOutputTable( HSCRIPT hEntity, const char *szOutputName, HSCRIPT hOutputTable, int element )
+	{
+		CBaseEntity *pBaseEntity = ToEnt(hEntity);
+		if ( !pBaseEntity || !hOutputTable || element < 0 )
+			return;
+
+		CBaseEntityOutput *pOutput = pBaseEntity->FindNamedOutput( szOutputName );
+		if ( pOutput )
+		{
+			int iCount = 0;
+			CEventAction *pAction = pOutput->GetFirstAction();
+			while ( pAction )
+			{
+				if ( iCount == element )
+				{
+					g_pScriptVM->SetValue( hOutputTable, "target", STRING( pAction->m_iTarget ) );
+					g_pScriptVM->SetValue( hOutputTable, "input", STRING( pAction->m_iTargetInput ) );
+					g_pScriptVM->SetValue( hOutputTable, "parameter", STRING( pAction->m_iParameter ) );
+					g_pScriptVM->SetValue( hOutputTable, "delay", pAction->m_flDelay );
+					g_pScriptVM->SetValue( hOutputTable, "times_to_fire", pAction->m_nTimesToFire );
+					break;
+				}
+				else
+				{
+					iCount++;
+					pAction = pAction->m_pNext;
+				}
+			}
+		}
+	}
+
+	bool HasOutput( HSCRIPT hEntity, const char *szOutputName )
+	{
+		CBaseEntity *pBaseEntity = ToEnt(hEntity);
+		if ( !pBaseEntity )
+			return false;
+
+		CBaseEntityOutput *pOutput = pBaseEntity->FindNamedOutput( szOutputName );
+		if ( !pOutput )
+			return false;
+
+		return true;
+	}
+
+	bool HasAction( HSCRIPT hEntity, const char *szOutputName )
+	{
+		CBaseEntity *pBaseEntity = ToEnt(hEntity);
+		if ( !pBaseEntity )
+			return false;
+
+		CBaseEntityOutput *pOutput = pBaseEntity->FindNamedOutput( szOutputName );
+		if ( pOutput )
+		{
+			CEventAction *pAction = pOutput->GetFirstAction();
+			if ( pAction )
+				return true;
+		}
+
+		return false;
+	}
+
+	void AddOutput( HSCRIPT hEntity, const char *szOutputName, const char *szTarget, const char *szTargetInput, const char *szParameter, float flDelay, int iTimesToFire )
+	{
+		CBaseEntity *pBaseEntity = ToEnt(hEntity);
+		if ( !pBaseEntity )
+			return;
+
+		CBaseEntityOutput *pOutput = pBaseEntity->FindNamedOutput( szOutputName );
+		if ( !pOutput )
+			return;
+
+		CEventAction *pAction = new CEventAction( NULL );
+		pAction->m_iTarget = AllocPooledString( szTarget );
+		pAction->m_iTargetInput = AllocPooledString( szTargetInput );
+		pAction->m_iParameter = AllocPooledString( szParameter );
+		pAction->m_flDelay = flDelay;
+		pAction->m_nTimesToFire = iTimesToFire;
+		pOutput->AddEventAction( pAction );
+	}
+
+	void RemoveOutput( HSCRIPT hEntity, const char *szOutputName, const char *szTarget, const char *szTargetInput, const char *szParameter )
+	{
+		CBaseEntity *pBaseEntity = ToEnt(hEntity);
+		if ( !pBaseEntity )
+			return;
+
+		CBaseEntityOutput *pOutput = pBaseEntity->FindNamedOutput( szOutputName );
+		if ( !pOutput )
+			return;
+
+		if ( V_strcmp( szTarget, "" ) == 0 )
+			pOutput->DeleteAllElements();
+		else
+		{
+			CEventAction *pAction = pOutput->GetFirstAction();
+			pOutput->ScriptRemoveEventAction( pAction, szTarget, szTargetInput, szParameter );
+		}
+	}
+} g_ScriptEntityOutputs;
+
+BEGIN_SCRIPTDESC_ROOT_NAMED( CScriptEntityOutputs, "CScriptEntityOutputs", SCRIPT_SINGLETON "Used to access entity output data" )
+	DEFINE_SCRIPTFUNC( GetNumElements, "Arguments: ( entity, outputName ) - returns the number of array elements" )
+	DEFINE_SCRIPTFUNC( GetOutputTable, "Arguments: ( entity, outputName, table, arrayElement ) - returns a table of output information" )
+	DEFINE_SCRIPTFUNC( HasOutput, "Arguments: ( entity, outputName ) - returns true if the output exists" )
+	DEFINE_SCRIPTFUNC( HasAction, "Arguments: ( entity, outputName ) - returns true if an action exists for the output" )
+	DEFINE_SCRIPTFUNC( AddOutput, "Arguments: ( entity, outputName, targetName, inputName, parameter, delay, timesToFire ) - add a new output to the entity" )
+	DEFINE_SCRIPTFUNC( RemoveOutput, "Arguments: ( entity, outputName, targetName, inputName, parameter ) - remove an output from the entity" )
+END_SCRIPTDESC();
+
+g_pScriptVM->RegisterInstance( &g_ScriptEntityOutputs, "EntityOutputs" );
+
+
+
+DEFINE_SCRIPTFUNC_NAMED( Script_IsMissionFinalMap, "IsMissionFinalMap", "True if the current map is the final map of the campaign" )
+DEFINE_SCRIPTFUNC_NAMED( Script_FindRescueAreaTrigger, "FindRescueAreaTrigger", "Returns the trigger for the rescue area" )
+ScriptRegisterFunctionNamed( g_pScriptVM, Script_GetDifficulty, "GetDifficulty", "Returns the current difficulty as a numeric value." );
+ScriptRegisterFunctionNamed( g_pScriptVM, Script_GetDifficultyString, "GetDifficultyString", "Returns the current difficulty as a string." );
+ScriptRegisterFunctionNamed( g_pScriptVM, Script_GetScavengeItemsGoal, "GetScavengeItemsGoal", "Returns number of Scavenge items needed." );
+ScriptRegisterFunctionNamed( g_pScriptVM, Script_GetScavengeItemsRemaining, "GetScavengeItemsRemaining", "Returns number of Scavenge items remaining." );
+ScriptRegisterFunctionNamed( g_pScriptVM, Script_SetScavengeItemsGoal, "SetScavengeItemsGoal", "Set the number of Scavenge items needed." );
+ScriptRegisterFunctionNamed( g_pScriptVM, Script_SetScavengeItemsRemaining, "SetScavengeItemsRemaining", "Set the number of Scavenge items remaining." );
+ScriptRegisterFunctionNamed( g_pScriptVM, Script_HasConfigurableDifficultySetting, "HasConfigurableDifficultySetting", "Returns true if the mode has more than a single difficulty." );
+
+
+bool Script_IsMissionFinalMap()
+{
+	return CTerrorGameRules::IsMissionFinalMap();
+}
+
+HSCRIPT Script_FindRescueAreaTrigger()
+{
+	CTriggerMultiple *pTrigger = CDirectorChallengeMode::FindRescueAreaTrigger();
+	return ToHScript( pTrigger );
+}
+
+static int Script_GetDifficulty()
+{
+	return (DifficultyType) GetDifficulty();
+}
+
+static const char *Script_GetDifficultyString()
+{
+	return GetDifficultyString( GetDifficulty() );
+}
+
+static int Script_GetScavengeItemsGoal()
+{
+	return CTerrorGameRules::GetScavengeItemsGoal();
+}
+
+static int Script_GetScavengeItemsRemaining()
+{
+	return CTerrorGameRules::GetScavengeItemsRemaining();
+}
+
+static void Script_SetScavengeItemsGoal( int iAmount )
+{
+	CTerrorGameRules::SetScavengeItemsGoal( iAmount );
+}
+
+static void Script_SetScavengeItemsRemaining( int iAmount )
+{
+	CTerrorGameRules::SetScavengeItemsRemaining( iAmount );
+}
+
+static bool Script_HasConfigurableDifficultySetting()
+{
+	return CTerrorGameRules::HasConfigurableDifficultySetting();
+}
+
+//
+// NOTE: This won't be needed if changed to use the existing CNavMesh class...
+//
+g_pScriptVM->RegisterInstance( &g_ScriptNavMesh, "NavMesh" );
+
+
+
+bool TerrorNavAreaScriptInstanceHelper::ToString( void *p, char *pBuf, int bufSize )	
+{
+	TerrorNavArea *pArea = (TerrorNavArea *)p;
+	V_snprintf( pBuf, bufSize, "([%u] Area)", pArea->GetID() );
+	return true;
+}
+
+TerrorNavAreaScriptInstanceHelper g_NavAreaScriptInstanceHelper;
+
+bool CNavLadderScriptInstanceHelper::ToString( void *p, char *pBuf, int bufSize )	
+{
+	CNavLadder *pLadder = (CNavLadder *)p;
+	V_snprintf( pBuf, bufSize, "([%u] Ladder)", pLadder->GetID() );
+	return true; 
+}
+
+CNavLadderScriptInstanceHelper g_NavLadderScriptInstanceHelper;

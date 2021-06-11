@@ -1,0 +1,43 @@
+DECLARE_ENT_SCRIPTDESC();
+
+
+	// VSCRIPT
+	HSCRIPT GetScriptInstance();
+	HSCRIPT	m_hScriptInstance;
+
+	int ScriptGetID( void ) const	{ return (int)GetID(); }
+	void ScriptConnectTo( HSCRIPT hArea );
+	void ScriptDisconnect( HSCRIPT hArea );
+	bool ScriptIsConnected( HSCRIPT hArea, int dir );
+	Vector ScriptGetBottomOrigin( void ) const	{ return m_bottom; }
+	Vector ScriptGetTopOrigin( void ) const	{ return m_top; }
+	HSCRIPT ScriptGetBottomArea( );
+	HSCRIPT ScriptGetTopArea( );
+	HSCRIPT ScriptGetLadderEntity( void );
+	bool ScriptIsInUse( HSCRIPT hIgnore );
+	int ScriptGetDir( void ) const	{ return (int)GetDir(); }
+	float ScriptGetLength( void ) const	{ return m_length; }
+	float ScriptGetWidth( void ) const	{ return m_width; }
+	
+	
+
+----------------------------------------------
+// Add the following to the constructor
+//CNavLadder( void )
+//
+
+m_hScriptInstance = NULL;
+
+----------------------------------------------
+
+
+inline HSCRIPT ToHScript( CNavLadder *pLadder )
+{
+	return ( pLadder ) ? pLadder->GetScriptInstance() : NULL;
+}
+
+template <> ScriptClassDesc_t *GetScriptDesc<CNavLadder>( CNavLadder * );
+inline CNavLadder *ToNavLadder( HSCRIPT hScript )
+{
+	return ( hScript ) ? (CNavLadder *)g_pScriptVM->GetInstanceValue( hScript, GetScriptDescForClass(CNavLadder) ) : NULL;
+}
